@@ -26,7 +26,7 @@ router  :   endian.o routingtable.o router.c
 	$(CC) $(CFLAGS) -D $(ROUTERMODE) -D DEBUG=$(DEBUG) endian.o routingtable.o router.c -o router -lnsl $(SOCKETLIB)
 
 unit-test  : routingtable.o unit-test.c
-	$(CC) $(CFLAGS) -D $(ROUTERMODE) -D DEBUG=$(DEBUG) routingtable.o unit-test.c -o unit-test -lnsl $(SOCKETLIB)
+	$(CC) $(CFLAGS) -g -D $(ROUTERMODE) -D DEBUG=$(DEBUG) routingtable.o unit-test.c -o unit-test -lnsl $(SOCKETLIB)
 
 clean :
 	rm -f *.o

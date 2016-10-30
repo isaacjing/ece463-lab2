@@ -145,6 +145,7 @@ int TestSplitHorizon() {
     updpkt.route[0].cost = 0;
     UpdateRoutes(&updpkt, nbrs.nbrcost[1].cost, MyRouterId);
     ConvertTabletoPkt(&resultpkt, MyRouterId);
+	//printf("resultpkt.no_routes = %d\n\n\n", resultpkt.no_routes);
     MyAssert(resultpkt.no_routes==4,"Incorrect number of routes while testing split horizon");
     for(i=0; i<resultpkt.no_routes; i++) {
         if(resultpkt.route[i].dest_id ==1) {
