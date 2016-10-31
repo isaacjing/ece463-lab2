@@ -79,7 +79,14 @@ void init_router(int argc, char **argv) {
     InitRoutingTbl(&initResponse, myId);
 }
 
+
 int main (int argc, char **argv) {
 	init_router(argc, argv);
+
+	char fileName[100];
+	strcpy(fileName, "router");
+	strcat(fileName, argv[1]);
+	strcat(fileName, ".log");
+	FILE *log_file = fopen(fileName, "wr");
 	return 1;
 }
