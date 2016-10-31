@@ -15,7 +15,7 @@ void init_router(int argc, char **argv) {
 	}
 
 	int myId = atoi(argv[1]);
-	char hostname[100] = argv[2];
+	char *hostname = argv[2];
 	int nePort = atoi(argv[3]);
 	int myPort = atoi(argv[4]);
 
@@ -58,8 +58,8 @@ void init_router(int argc, char **argv) {
 	initRequest.router_id = htonl(myId);
 
     /* Send INIT_REQUEST packet to NE */
-    serverlen = sizeof(serveraddr);
-    n = sendto(sockfd, &initRequest, sizeof(initRequest), 0, &serveraddr, serverlen);
+    int serverlen = sizeof(serveraddr);
+    int n = sendto(sockfd, &initRequest, sizeof(initRequest), 0, (struct sockaddr *) &serveraddr, serverlen);
     if (n < 0) {
     	fprintf(stderr, "Failed to send INIT_REQUEST");
     	exit(-1);
@@ -68,7 +68,7 @@ void init_router(int argc, char **argv) {
     /* INIT_RESPONSE packet */
     struct pkt_INIT_RESPONSE initResponse;
     /* Receive INIT_RESPONSE packet from NE */
-    n = recvfrom(sockfd, &initResponse, strlen(initResponse), 0, &serveraddr, &serverlen);
+    n = recvfrom(sockfd, &initResponse, sizeof(initResponse), 0, (struct sockaddr *) &serveraddr, (socklen_t *) &serverlen);
     if (n < 0) {
     	fprintf(stderr, "Failed to receive INIT_RESPONSE");
     	exit(-1);
@@ -80,4 +80,11 @@ void init_router(int argc, char **argv) {
 
 int main (int argc, char **argv) {
 	init_router(argc, argv);
+
+	char fileName[100];
+	strcpy(fileName, "router");
+	strcat(fileName, argv[1]);
+	strcat(fileName, ".log");
+	FILE *log_file = fopen(fileName, "wr");
+	return 1;
 }
