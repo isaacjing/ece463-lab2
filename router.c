@@ -78,6 +78,7 @@ void init_router(int argc, char **argv) {
     InitRoutingTbl(&initResponse, myId);
 }
 
+
 int main (int argc, char **argv) {
 	init_router(argc, argv);
 
