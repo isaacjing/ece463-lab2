@@ -6,12 +6,15 @@
 #include "ne.h"
 #include "router.h"
 #include <sys/timerfd.h>
+#include <time.h>
 
 extern struct route_entry routingTable[MAX_ROUTERS];
 extern int NumRoutes;
 int *neighbor_ids;
 int sock_fd, myId, NumNeighbors;
 FILE *log_file;
+struct sockaddr_in serveraddr;
+clock_t begin;
 
 /*
 	Function used to send RT_UPDATE packet to sock_id
@@ -19,6 +22,30 @@ FILE *log_file;
 		timer_fd: needs to be reset to UPDATE_INTERVAL in the function
 */
 void process_send_updates(int send_fd) {
+	int i, err;
+	struct pkt_RT_UPDATE updatePackage;
+	struct itimerspec itval;
+	
+	memset(&updatePackage, 0, sizeof updatePackage);
+	ConvertTabletoPkt(&updatePackage, myId);
+	for(i = 0; i < NumNeighbors; i++){
+		updatePackage.dest_id = neighbor_ids[i];
+		hton_pkt_RT_UPDATE(&updatePackage);	//Convert to network endian
+		if(sendto(sock_fd, &updatePackage, sizeof(updatePackage), 0, (struct sockaddr *) &serveraddr, sizeof(serveraddr)) < 0){
+			printf("Error when sending updates to ne\n");
+			exit(-1);
+		}
+	}
+	//Reset the send_fd
+	/*	Initial expiration time */
+	itval.it_value.tv_sec = UPDATE_INTERVAL;
+	itval.it_value.tv_nsec = 0;
+
+	/*	Periodic expiration time to be 0 
+		and update initial expiration time every time it expires*/
+	itval.it_interval.tv_sec = 0;
+	itval.it_interval.tv_nsec = 0;
+	err = timerfd_settime (send_fd, 0, &itval, NULL);
 }
 
 /*
@@ -42,6 +69,9 @@ void process_receive_updates(int *neighbor_fds, int converge_fd) {
 		print time elapsed since first receive INIT_RESPONSE
 */
 void process_converge() {
+	clock_t end = clock();
+	int time_spent = (int)(end - begin) / CLOCKS_PER_SEC;
+	fprintf(log_file, "%d: Converged\n", time_spent);
 }
 
 /*
@@ -82,7 +112,7 @@ void init_router(int argc, char **argv) {
     }
 
     /* build the server's Internet address */
-    struct sockaddr_in serveraddr;
+    
     bzero((char *) &serveraddr, sizeof(serveraddr));
     serveraddr.sin_family = AF_INET;
     bcopy((char *)server->h_addr, 
@@ -121,6 +151,10 @@ void init_router(int argc, char **argv) {
     	fprintf(stderr, "Failed to receive INIT_RESPONSE");
     	exit(-1);
     }
+	
+	/* Start the global timer */
+	begin = clock();
+	
     ntoh_pkt_INIT_RESPONSE(&initResponse);
 
     /* Initialize routing table */
@@ -223,6 +257,7 @@ void main_loop() {
 	}
 
 	max_fd = sock_fd > max_fd ? sock_fd : max_fd;
+	
 
 	/*	Loop for various timers */
 	fd_set rfds;
@@ -237,6 +272,7 @@ void main_loop() {
 		select(max_fd + 1, &rfds, NULL, NULL, NULL);
 
 		if (FD_ISSET(send_fd, &rfds)) {
+			process_send_updates(send_fd);
 		}
 		else if (FD_ISSET(sock_fd, &rfds)) {
 		}
@@ -256,6 +292,6 @@ int main (int argc, char **argv) {
 	init_router(argc, argv);
 
 	log_file = open_log(argv[1]);
-
+	main_loop();
 	return 1;
 }

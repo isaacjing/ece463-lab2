@@ -36,7 +36,7 @@ void InitRoutingTbl (struct pkt_INIT_RESPONSE *InitResponse, int myID){
 	routingTable[i].next_hop = myID;
 	routingTable[i].dest_id = myID;
 	NumRoutes = i + 1;
-	printf("NumRoutes = %d\n", NumRoutes);
+	//printf("NumRoutes = %d\n", NumRoutes);
 }
 
 /* Routine Name    : UpdateRoutes
@@ -84,7 +84,7 @@ int UpdateRoutes(struct pkt_RT_UPDATE *RecvdUpdatePacket, int costToNbr, int myI
 		if(j == NumRoutes){	//Not found the updates destination in my routing table
 			routingTable[j].dest_id = currentEntry.dest_id;
 			routingTable[j].next_hop = RecvdUpdatePacket->sender_id;
-			printf("NumRoutes = %d, MAX_ROUTERS = %d, j = %d, newCost = %d\n", NumRoutes, MAX_ROUTERS, j, newCost);
+			//printf("NumRoutes = %d, MAX_ROUTERS = %d, j = %d, newCost = %d\n", NumRoutes, MAX_ROUTERS, j, newCost);
 			routingTable[j].cost = newCost;
 			NumRoutes += 1;
 			changed = 1;

@@ -1,0 +1,2 @@
+We finished everything in routingtable.c
+We also had about 50% of code done in router.c
