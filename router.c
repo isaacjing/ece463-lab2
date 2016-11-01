@@ -9,8 +9,52 @@
 
 extern struct route_entry routingTable[MAX_ROUTERS];
 extern int NumRoutes;
-int sock_fd;
+int *neighbor_ids;
+int sock_fd, myId, NumNeighbors;
 FILE *log_file;
+
+/*
+	Function used to send RT_UPDATE packet to sock_id
+	Parameter:
+		timer_fd: needs to be reset to UPDATE_INTERVAL in the function
+*/
+void process_send_updates(int send_fd) {
+}
+
+/*
+	Funciton used to receive RT_UPDATE form sock_id
+	Update routing table accordingly
+	Todo:
+		update routing table
+		reset converge timer to CONVERGE_TIMEOUT
+		re-enable timers for restarted neighbors
+		print out to log file
+	Parameter:
+		neighbor_fds: array of neighbors' fds
+		converge_fd: 
+*/
+void process_receive_updates(int *neighbor_fds, int converge_fd) {
+}
+
+/*
+	Function used to print out to log
+	Todo:
+		print time elapsed since first receive INIT_RESPONSE
+*/
+void process_converge() {
+}
+
+/*
+	Function used to process a dead neighbor
+	Todo:
+		update routing table
+		print out to log file
+		disable time
+	Parameter:
+
+*/
+void process_neighbor(int neighbor_fd) {
+}
 
 void init_router(int argc, char **argv) {
 	if (argc < 5) {
@@ -18,7 +62,7 @@ void init_router(int argc, char **argv) {
 		exit(-1);
 	}
 
-	int myId = atoi(argv[1]);
+	myId = atoi(argv[1]);
 	char *hostname = argv[2];
 	int nePort = atoi(argv[3]);
 	int myPort = atoi(argv[4]);
@@ -81,6 +125,13 @@ void init_router(int argc, char **argv) {
 
     /* Initialize routing table */
     InitRoutingTbl(&initResponse, myId);
+
+    /* Record router_ids of each neighbor */
+    neighbor_ids = (int*)malloc(sizeof(int) * (NumRoutes - 1));
+    NumNeighbors = NumRoutes - 1;
+    int i;
+    for (i = 0; i < NumRoutes; i++) 
+    	neighbor_ids[i] = routingTable[i].dest_id;
 }
 
 FILE *open_log(char *myId) {
@@ -94,9 +145,9 @@ FILE *open_log(char *myId) {
 void main_loop() {
 	/*	If alive[id] is 0, router<id> is dead 
 		first assume all neighbors are alive */
-	char *alive = (char*)malloc(NumRoutes);
+	char *alive = (char*)malloc(NumNeighbors);
 	int i;
-	for (i = 0; i < NumRoutes; i++) {
+	for (i = 0; i < NumNeighbors; i++) {
 		alive[i] = 1;
 	}
 
@@ -126,8 +177,8 @@ void main_loop() {
 	}
 
 	/*	Timers for detecting dead neighbors */
-	int *neighbor_fds = (int*)malloc(sizeof(int) * NumRoutes);
-	for (i = 0; i < NumRoutes; i++) {
+	int *neighbor_fds = (int*)malloc(sizeof(int) * (NumNeighbors));
+	for (i = 0; i < NumNeighbors; i++) {
 		neighbor_fds[i] = timerfd_create(CLOCK_MONOTONIC, 0);
 		if (neighbor_fds[i] < 0) {
 			fprintf(stderr, "Failed to create fd for neighbor %d.", i);
@@ -180,7 +231,7 @@ void main_loop() {
 		FD_SET(sock_fd, &rfds);
 		FD_SET(send_fd, &rfds);
 		FD_SET(converge_fd, &rfds);
-		for (i = 0; i < NumRoutes; i++)
+		for (i = 0; i < NumNeighbors; i++)
 			if (alive[i])
 				FD_SET(neighbor_fds[i], &rfds);
 		select(max_fd + 1, &rfds, NULL, NULL, NULL);
@@ -192,7 +243,7 @@ void main_loop() {
 		else if (FD_ISSET(converge_fd, &rfds)) {
 		}
 		else {
-			for (i = 0; i < NumRoutes; i++) {
+			for (i = 0; i < NumNeighbors; i++) {
 				if (FD_ISSET(neighbor_fds[i], &rfds)) {
 				}
 			}
