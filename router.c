@@ -84,6 +84,16 @@ void process_converge() {
 
 */
 void process_neighbor(int neighbor_fd) {
+	UninstallRoutesOnNbrDeath(int neighbor_fd);
+	printTable();
+}
+
+void printTable(){
+	int i = 0;
+	fprintf(log_file, "Routing Table:\n");
+	for(i = 0; i < MAX_ROUTERS; i++){
+		fprintf(log_file, "R%c -> R%c: R%C, %d", itoa(routingTable[i]).);
+	}
 }
 
 void init_router(int argc, char **argv) {
