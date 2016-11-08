@@ -16,6 +16,15 @@ FILE *log_file;
 struct sockaddr_in serveraddr;
 clock_t begin;
 
+void printTable(){
+	int i = 0;
+	fprintf(log_file, "Routing Table:\n");
+	for(i = 0; i < MAX_ROUTERS; i++){
+		fprintf(log_file, "R%c -> R%c: R%C, %d\n", myId, routingTable[i].dest_id, routingTable[i].next_hop
+			, routingTable[i].cost);
+	}
+}
+
 /*
 	Function used to send RT_UPDATE packet to sock_id
 	Parameter:
@@ -46,6 +55,10 @@ void process_send_updates(int send_fd) {
 	itval.it_interval.tv_sec = 0;
 	itval.it_interval.tv_nsec = 0;
 	err = timerfd_settime (send_fd, 0, &itval, NULL);
+	if (err < 0) {
+		fprintf(stderr, "Failed to set time for fd of neighbor %d.", i);
+		exit(-1);
+	}
 }
 
 /*
@@ -61,6 +74,102 @@ void process_send_updates(int send_fd) {
 		converge_fd: 
 */
 void process_receive_updates(int *neighbor_fds, int converge_fd) {
+	/* INIT_RESPONSE packet */
+    struct pkt_RT_UPDATE pkt_update;
+    /* Receive INIT_RESPONSE packet from NE */
+    int serverlen = sizeof(serveraddr);
+    int n = recvfrom(sock_fd, &pkt_update, sizeof(pkt_update), 0, (struct sockaddr *) &serveraddr, (socklen_t *) &serverlen);
+    if (n < 0) {
+    	fprintf(stderr, "Failed to receive INIT_RESPONSE");
+    	exit(-1);
+    }
+    ntoh_pkt_RT_UPDATE(&pkt_update);
+    int sender_id = pkt_update.sender_id, num_routes = pkt_update.no_routes;
+    int i, j;
+    int cost_to_sender;
+    int changed = 0;
+
+    for (i = 0; i < NumNeighbors; i++)
+    	if (routingTable[i].dest_id == sender_id) {
+    		cost_to_sender = routingTable[i].cost;
+    		break;
+    	}
+
+    /*	If cost_to_sender is INIFINITY it just restared */
+   	struct itimerspec itval;
+   	int err;
+    if (cost_to_sender == INFINITY) {
+    	int index;
+    	for (i = 0; i < NumNeighbors; i++)
+    		if (neighbor_ids[i] == sender_id) {
+    			index = i;
+    			break;
+    		}
+    	itval.it_value.tv_sec = FAILURE_DETECTION;
+    	itval.it_value.tv_nsec = 0;
+
+    	itval.it_interval.tv_sec = 0;
+    	itval.it_interval.tv_nsec = 0;
+    	err = timerfd_settime(neighbor_fds[index], 0, &itval, NULL);
+    	if (err < 0) {
+			fprintf(stderr, "Failed to set time for fd of neighbor %d.", i);
+			exit(-1);
+		}
+    }
+
+    for (i = 0; i < num_routes; i++) {
+    	struct route_entry entry = pkt_update.route[i];
+    	struct route_entry my_entry;
+
+    	int found = 0;
+    	for (j = 0; j < NumRoutes; j++)
+    		if (routingTable[j].dest_id == entry.dest_id) {
+    			found = 1;
+    			my_entry = routingTable[j];
+    			break;
+    		}
+
+    	/*	If this entry is not present in my routing table, add it */
+    	if (!found) {
+    		struct route_entry new_entry = entry;
+    		new_entry.next_hop = sender_id;
+    		new_entry.cost += cost_to_sender;
+    		routingTable[NumRoutes++] = new_entry;
+    		continue;
+    	}
+
+    	/*	Split Horizon Rule */
+    	if (entry.next_hop == myId) {
+    		continue;
+    	}
+    	if (entry.cost + cost_to_sender < my_entry.cost) {
+    		my_entry.next_hop = sender_id;
+    		my_entry.cost = entry.cost + cost_to_sender;
+    		changed = 1;
+    	}
+
+    	/*	Force Update Rule */
+    	if (my_entry.next_hop == sender_id) 
+    		if (my_entry.cost != entry.cost + cost_to_sender) {
+    			changed = 1;
+    			my_entry.cost = entry.cost + cost_to_sender;
+    		}
+    }
+    if (changed) {
+    	/*	Reset converge timer */
+    	itval.it_value.tv_sec = CONVERGE_TIMEOUT;
+    	itval.it_value.tv_nsec = 0;
+
+    	itval.it_interval.tv_sec = 0;
+    	itval.it_interval.tv_nsec = 0;
+    	err = timerfd_settime(converge_fd, 0, &itval, NULL);
+    	if (err < 0) {
+			fprintf(stderr, "Failed to set time for fd of neighbor %d.", i);
+			exit(-1);
+		}
+
+    	printTable();
+    }
 }
 
 /*
@@ -74,6 +183,7 @@ void process_converge() {
 	fprintf(log_file, "%d: Converged\n", time_spent);
 }
 
+
 /*
 	Function used to process a dead neighbor
 	Todo:
@@ -83,18 +193,27 @@ void process_converge() {
 	Parameter:
 
 */
-void process_neighbor(int neighbor_fd) {
-	UninstallRoutesOnNbrDeath(int neighbor_fd);
+void process_neighbor(int neighbor_fd, int index) {
+	UninstallRoutesOnNbrDeath(neighbor_ids[index]);
 	printTable();
-}
+	struct itimerspec itval;
+	int err;
 
-void printTable(){
-	int i = 0;
-	fprintf(log_file, "Routing Table:\n");
-	for(i = 0; i < MAX_ROUTERS; i++){
-		fprintf(log_file, "R%c -> R%c: R%C, %d", itoa(routingTable[i]).);
+	/*	Initial expiration time */
+	itval.it_value.tv_sec = 0;
+	itval.it_value.tv_nsec = 0;
+
+	/*	Periodic expiration time to be 0 
+		and update initial expiration time every time it expires*/
+	itval.it_interval.tv_sec = 0;
+	itval.it_interval.tv_nsec = 0;
+	err = timerfd_settime (neighbor_fd, 0, &itval, NULL);
+	if (err < 0) {
+		fprintf(stderr, "Failed to disable dead neighbor timer");
+		exit(-1);
 	}
 }
+
 
 void init_router(int argc, char **argv) {
 	if (argc < 5) {
@@ -285,12 +404,15 @@ void main_loop() {
 			process_send_updates(send_fd);
 		}
 		else if (FD_ISSET(sock_fd, &rfds)) {
+			process_receive_updates(neighbor_fds, converge_fd);
 		}
 		else if (FD_ISSET(converge_fd, &rfds)) {
+			process_converge();
 		}
 		else {
 			for (i = 0; i < NumNeighbors; i++) {
 				if (FD_ISSET(neighbor_fds[i], &rfds)) {
+					process_neighbor(neighbor_fds[i], i);
 				}
 			}
 		}
