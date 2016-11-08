@@ -23,7 +23,7 @@ routingtable.o   :   ne.h routingtable.c
 	$(CC) $(CFLAGS) -D $(ROUTERMODE) -c routingtable.c
 	
 router  :   endian.o routingtable.o router.c
-	$(CC) $(CFLAGS) -D $(ROUTERMODE) -D DEBUG=$(DEBUG) endian.o routingtable.o router.c -o router -lnsl $(SOCKETLIB)
+	$(CC) $(CFLAGS) -D $(ROUTERMODE) -D DEBUG=$(DEBUG)  endian.o routingtable.o router.c -o router -lnsl $(SOCKETLIB)
 
 unit-test  : routingtable.o unit-test.c
 	$(CC) $(CFLAGS) -g -D $(ROUTERMODE) -D DEBUG=$(DEBUG) routingtable.o unit-test.c -o unit-test -lnsl $(SOCKETLIB)

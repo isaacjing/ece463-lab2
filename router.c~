@@ -25,7 +25,6 @@ void printTable(){
 			, routingTable[i].cost);
 	}
 	fprintf(log_file, "\n");
-	fflush(log_file);
 }
 
 /*

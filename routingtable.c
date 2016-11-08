@@ -109,6 +109,7 @@ void ConvertTabletoPkt(struct pkt_RT_UPDATE *UpdatePacketToSend, int myID){
 	int i;
 	UpdatePacketToSend->sender_id = myID;
 	UpdatePacketToSend->no_routes = NumRoutes;
+printf("----Inside convertTabletoPkt: sender_id: %d,no_routes: %d\n", UpdatePacketToSend->sender_id, UpdatePacketToSend->no_routes);
 	
 	for(i = 0; i < NumRoutes; i++){
 		UpdatePacketToSend->route[i] = routingTable[i];
