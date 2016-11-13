@@ -100,17 +100,19 @@ void process_receive_updates(int *neighbor_fds, int converge_fd) {
     int i, j;
     int cost_to_sender;
     int changed = 0;
+    int my_table_index;
 
-    for (i = 0; i < num_routes; i++)
+    for (i = 0; i < NumRoutes; i++)
     	if (routingTable[i].dest_id == sender_id) {
     		cost_to_sender = routingTable[i].cost;
     		break;
     	}
+	//printf("MyID: %d, cost to sender %d is: %d\n", myId, sender_id, cost_to_sender);
 
     /*	If cost_to_sender is INIFINITY it just restared */
    	struct itimerspec itval;
    	int err;
-    if (cost_to_sender == INFINITY) {
+   // if (cost_to_sender >= INFINITY) {
     	int index;
     	for (i = 0; i < NumNeighbors; i++)
     		if (neighbor_ids[i] == sender_id) {
@@ -127,7 +129,7 @@ void process_receive_updates(int *neighbor_fds, int converge_fd) {
 			fprintf(stderr, "Failed to set time for fd of neighbor %d.", i);
 			exit(-1);
 		}
-    }
+  //  }
 
     for (i = 0; i < num_routes; i++) {
     	struct route_entry entry = pkt_update.route[i];
@@ -137,6 +139,7 @@ void process_receive_updates(int *neighbor_fds, int converge_fd) {
     	for (j = 0; j < NumRoutes; j++)
     		if (routingTable[j].dest_id == entry.dest_id) {
     			found = 1;
+			my_table_index = j;
     			my_entry = routingTable[j];
     			break;
     		}
@@ -147,25 +150,33 @@ void process_receive_updates(int *neighbor_fds, int converge_fd) {
     		new_entry.next_hop = sender_id;
     		new_entry.cost += cost_to_sender;
     		routingTable[NumRoutes++] = new_entry;
+		printf("*MyID %d adding entry: dest %d, next_hop %d, cost %d\n", myId, entry.dest_id, sender_id, new_entry.cost);
+		changed = 1;
     		continue;
     	}
 
+	/*	Force Update Rule */
+    	if (my_entry.next_hop == sender_id) {
+    		if (my_entry.cost != entry.cost + cost_to_sender) {
+    			changed = 1;
+			printf("*Force Update: Updating cost to %d, previous cost %d, previous next_hop %d, new cost %d, new next_hop %d, cost_to_sender %d\n", my_entry.dest_id, my_entry.cost, my_entry.next_hop, entry.cost + cost_to_sender, sender_id, cost_to_sender);
+    			my_entry.cost = entry.cost + cost_to_sender;
+			routingTable[my_table_index] = my_entry;
+    		}
+	}
     	/*	Split Horizon Rule */
-    	if (entry.next_hop == myId) {
+    	else if (entry.next_hop == myId) {
     		continue;
     	}
-    	if (entry.cost + cost_to_sender < my_entry.cost) {
+    	else if (entry.cost + cost_to_sender < my_entry.cost) {
+		printf("*Split Horizon: Updating cost to %d, previous cost %d, previous next_hop %d, new cost %d, new next_hop %d, cost_to_sender %d\n", my_entry.dest_id, my_entry.cost, my_entry.next_hop, entry.cost + cost_to_sender, sender_id, cost_to_sender);
     		my_entry.next_hop = sender_id;
     		my_entry.cost = entry.cost + cost_to_sender;
+		routingTable[my_table_index] = my_entry;
     		changed = 1;
     	}
 
-    	/*	Force Update Rule */
-    	if (my_entry.next_hop == sender_id) 
-    		if (my_entry.cost != entry.cost + cost_to_sender) {
-    			changed = 1;
-    			my_entry.cost = entry.cost + cost_to_sender;
-    		}
+    	
     }
     //printf("Received updates, changed = %d\n", changed);
     if (changed) {

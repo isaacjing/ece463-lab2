@@ -13,67 +13,56 @@ R0 -> R3: R2, 56
 
 Routing Table:
 R0 -> R1: R1, 4
-R0 -> R2: R2, 50
+R0 -> R2: R1, 5
 R0 -> R0: R0, 0
-R0 -> R3: R2, 56
+R0 -> R3: R1, 11
+
+0: Converged
+Routing Table:
+R0 -> R1: R1, 4
+R0 -> R2: R1, 5
+R0 -> R0: R0, 0
+R0 -> R3: R1, 1004
 
 Routing Table:
-R0 -> R1: R1, 999
-R0 -> R2: R2, 50
+R0 -> R1: R1, 4
+R0 -> R2: R1, 5
 R0 -> R0: R0, 0
-R0 -> R3: R2, 56
+R0 -> R3: R1, 21
 
 Routing Table:
-R0 -> R1: R1, 999
-R0 -> R2: R2, 999
+R0 -> R1: R1, 4
+R0 -> R2: R1, 5
 R0 -> R0: R0, 0
-R0 -> R3: R2, 999
+R0 -> R3: R1, 1014
 
 Routing Table:
-R0 -> R1: R1, 999
-R0 -> R2: R2, 999
+R0 -> R1: R1, 4
+R0 -> R2: R1, 5
 R0 -> R0: R0, 0
-R0 -> R3: R2, 999
+R0 -> R3: R1, 31
 
 Routing Table:
-R0 -> R1: R1, 999
-R0 -> R2: R2, 999
+R0 -> R1: R1, 4
+R0 -> R2: R1, 5
 R0 -> R0: R0, 0
-R0 -> R3: R2, 999
+R0 -> R3: R1, 1024
 
 Routing Table:
-R0 -> R1: R1, 999
-R0 -> R2: R2, 999
+R0 -> R1: R1, 4
+R0 -> R2: R1, 5
 R0 -> R0: R0, 0
-R0 -> R3: R2, 999
+R0 -> R3: R1, 41
 
 Routing Table:
-R0 -> R1: R1, 999
-R0 -> R2: R2, 999
+R0 -> R1: R1, 4
+R0 -> R2: R1, 5
 R0 -> R0: R0, 0
-R0 -> R3: R2, 999
+R0 -> R3: R1, 1034
 
 Routing Table:
-R0 -> R1: R1, 999
-R0 -> R2: R2, 999
+R0 -> R1: R1, 4
+R0 -> R2: R1, 5
 R0 -> R0: R0, 0
-R0 -> R3: R2, 999
-
-Routing Table:
-R0 -> R1: R1, 999
-R0 -> R2: R2, 999
-R0 -> R0: R0, 0
-R0 -> R3: R2, 999
-
-Routing Table:
-R0 -> R1: R1, 999
-R0 -> R2: R2, 999
-R0 -> R0: R0, 0
-R0 -> R3: R2, 999
-
-Routing Table:
-R0 -> R1: R1, 999
-R0 -> R2: R2, 999
-R0 -> R0: R0, 0
-R0 -> R3: R2, 999
+R0 -> R3: R1, 51
 
