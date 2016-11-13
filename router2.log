@@ -1,3 +1,11 @@
+-------
+Routing Table:
+R2 -> R0: R0, 50
+R2 -> R1: R1, 1
+R2 -> R3: R3, 6
+R2 -> R2: R2, 0
+
+--------
 Routing Table:
 R2 -> R0: R0, 50
 R2 -> R1: R1, 1
@@ -29,21 +37,3 @@ R2 -> R3: R3, 999
 R2 -> R2: R2, 0
 
 0: Converged
-Routing Table:
-R2 -> R0: R0, 999
-R2 -> R1: R1, 999
-R2 -> R3: R3, 999
-R2 -> R2: R2, 0
-
-Routing Table:
-R2 -> R0: R0, 999
-R2 -> R1: R1, 999
-R2 -> R3: R3, 999
-R2 -> R2: R2, 0
-
-Routing Table:
-R2 -> R0: R0, 999
-R2 -> R1: R1, 999
-R2 -> R3: R3, 999
-R2 -> R2: R2, 0
-

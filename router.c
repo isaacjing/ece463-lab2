@@ -19,7 +19,6 @@ clock_t begin;
 void printTable(){
 	int i = 0;
 	fprintf(log_file, "Routing Table:\n");
-	printf("Routing Table:\n");
 	for(i = 0; i < NumRoutes; i++){
 		fprintf(log_file, "R%d -> R%d: R%d, %d\n", myId, routingTable[i].dest_id, routingTable[i].next_hop
 			, routingTable[i].cost);
@@ -102,7 +101,7 @@ void process_receive_updates(int *neighbor_fds, int converge_fd) {
     int cost_to_sender;
     int changed = 0;
 
-    for (i = 0; i < NumNeighbors; i++)
+    for (i = 0; i < num_routes; i++)
     	if (routingTable[i].dest_id == sender_id) {
     		cost_to_sender = routingTable[i].cost;
     		break;
@@ -323,6 +322,9 @@ void init_router(int argc, char **argv) {
     int i;
     for (i = 0; i < NumRoutes; i++) 
     	neighbor_ids[i] = routingTable[i].dest_id;
+fprintf(log_file, "-------\n");
+printTable();
+fprintf(log_file, "--------\n");
 }
 
 FILE *open_log(char *myId) {
@@ -450,9 +452,8 @@ void main_loop() {
 }
 
 int main (int argc, char **argv) {
-	init_router(argc, argv);
-
 	log_file = open_log(argv[1]);
+	init_router(argc, argv);
 	main_loop();
 	fclose(log_file);
 	return 1;
