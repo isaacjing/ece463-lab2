@@ -19,10 +19,13 @@ clock_t begin;
 void printTable(){
 	int i = 0;
 	fprintf(log_file, "Routing Table:\n");
-	for(i = 0; i < MAX_ROUTERS; i++){
-		fprintf(log_file, "R%c -> R%c: R%C, %d\n", myId, routingTable[i].dest_id, routingTable[i].next_hop
+	printf("Routing Table:\n");
+	for(i = 0; i < NumRoutes; i++){
+		fprintf(log_file, "R%d -> R%d: R%d, %d\n", myId, routingTable[i].dest_id, routingTable[i].next_hop
 			, routingTable[i].cost);
 	}
+	fprintf(log_file, "\n");
+	fflush(log_file);
 }
 
 /*
@@ -32,16 +35,26 @@ void printTable(){
 */
 void process_send_updates(int send_fd) {
 	int i, err;
-	struct pkt_RT_UPDATE updatePackage;
+	
 	struct itimerspec itval;
 	
-	memset(&updatePackage, 0, sizeof updatePackage);
-	ConvertTabletoPkt(&updatePackage, myId);
+	
+	
 	for(i = 0; i < NumNeighbors; i++){
+		struct pkt_RT_UPDATE updatePackage;
+		memset(&updatePackage, 0, sizeof(updatePackage));
+		ConvertTabletoPkt(&updatePackage, myId);
+
 		updatePackage.dest_id = neighbor_ids[i];
+		//printf("Current dest_id is: %d\n", neighbor_ids[i]);
+		//printf("sender_id: %d, dest_id: %d, no_routes: %d\n", updatePackage.sender_id, updatePackage.dest_id, updatePackage.no_routes);
+		//printf("first entry dest_id: %d, next_hop: %d, cost: %d\n",
+			//updatePackage.route[0].dest_id,
+			//updatePackage.route[0].next_hop,
+			//updatePackage.route[0].cost);
 		hton_pkt_RT_UPDATE(&updatePackage);	//Convert to network endian
 		if(sendto(sock_fd, &updatePackage, sizeof(updatePackage), 0, (struct sockaddr *) &serveraddr, sizeof(serveraddr)) < 0){
-			printf("Error when sending updates to ne\n");
+			fprintf(stderr, "Error when sending updates to ne\n");
 			exit(-1);
 		}
 	}
@@ -80,11 +93,12 @@ void process_receive_updates(int *neighbor_fds, int converge_fd) {
     int serverlen = sizeof(serveraddr);
     int n = recvfrom(sock_fd, &pkt_update, sizeof(pkt_update), 0, (struct sockaddr *) &serveraddr, (socklen_t *) &serverlen);
     if (n < 0) {
-    	fprintf(stderr, "Failed to receive INIT_RESPONSE");
+    	fprintf(stderr, "Failed to receive UPDATES");
     	exit(-1);
     }
     ntoh_pkt_RT_UPDATE(&pkt_update);
     int sender_id = pkt_update.sender_id, num_routes = pkt_update.no_routes;
+	printf("SENDER id: %d, num routes: %d\n", sender_id, num_routes);
     int i, j;
     int cost_to_sender;
     int changed = 0;
@@ -92,6 +106,7 @@ void process_receive_updates(int *neighbor_fds, int converge_fd) {
     for (i = 0; i < NumNeighbors; i++)
     	if (routingTable[i].dest_id == sender_id) {
     		cost_to_sender = routingTable[i].cost;
+		printf("cost_to_sender is %d\n", cost_to_sender);
     		break;
     	}
 
@@ -123,9 +138,11 @@ void process_receive_updates(int *neighbor_fds, int converge_fd) {
 
     	int found = 0;
     	for (j = 0; j < NumRoutes; j++)
+		printf("Updating entry: %d\n", entry.dest_id);
     		if (routingTable[j].dest_id == entry.dest_id) {
     			found = 1;
     			my_entry = routingTable[j];
+			printf("Found entry %d\n", entry.dest_id);
     			break;
     		}
 
@@ -155,6 +172,7 @@ void process_receive_updates(int *neighbor_fds, int converge_fd) {
     			my_entry.cost = entry.cost + cost_to_sender;
     		}
     }
+    //printf("Received updates, changed = %d\n", changed);
     if (changed) {
     	/*	Reset converge timer */
     	itval.it_value.tv_sec = CONVERGE_TIMEOUT;
@@ -177,10 +195,24 @@ void process_receive_updates(int *neighbor_fds, int converge_fd) {
 	Todo:
 		print time elapsed since first receive INIT_RESPONSE
 */
-void process_converge() {
+void process_converge(int converge_fd) {
 	clock_t end = clock();
 	int time_spent = (int)(end - begin) / CLOCKS_PER_SEC;
 	fprintf(log_file, "%d: Converged\n", time_spent);
+	fflush(log_file);
+	struct itimerspec itval;
+	itval.it_value.tv_sec = 0;
+	itval.it_value.tv_nsec = 0;
+
+	/*	Periodic expiration time to be 0 
+		and update initial expiration time every time it expires*/
+	itval.it_interval.tv_sec = 0;
+	itval.it_interval.tv_nsec = 0;
+	int err = timerfd_settime (converge_fd, 0, &itval, NULL);
+	if (err < 0) {
+		fprintf(stderr, "Failed to set time for fd sending updates.");
+		exit(-1);
+	}
 }
 
 
@@ -404,10 +436,11 @@ void main_loop() {
 			process_send_updates(send_fd);
 		}
 		else if (FD_ISSET(sock_fd, &rfds)) {
+			
 			process_receive_updates(neighbor_fds, converge_fd);
 		}
 		else if (FD_ISSET(converge_fd, &rfds)) {
-			process_converge();
+			process_converge(converge_fd);
 		}
 		else {
 			for (i = 0; i < NumNeighbors; i++) {
@@ -425,5 +458,6 @@ int main (int argc, char **argv) {
 
 	log_file = open_log(argv[1]);
 	main_loop();
+	fclose(log_file);
 	return 1;
 }
