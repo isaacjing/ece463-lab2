@@ -18,13 +18,14 @@ clock_t begin;
 
 void printTable(){
 	int i = 0;
-	//fprintf(log_file, "Routing Table:\n");
+	fprintf(log_file, "Routing Table:\n");
 	printf("Routing Table:\n");
 	for(i = 0; i < NumRoutes; i++){
-		printf("R%d -> R%d: R%d, %d\n", myId, routingTable[i].dest_id, routingTable[i].next_hop
+		fprintf(log_file, "R%d -> R%d: R%d, %d\n", myId, routingTable[i].dest_id, routingTable[i].next_hop
 			, routingTable[i].cost);
 	}
 	fprintf(log_file, "\n");
+	fflush(log_file);
 }
 
 /*
@@ -45,15 +46,15 @@ void process_send_updates(int send_fd) {
 		ConvertTabletoPkt(&updatePackage, myId);
 
 		updatePackage.dest_id = neighbor_ids[i];
-		printf("Current dest_id is: %d\n", neighbor_ids[i]);
-		printf("sender_id: %d, dest_id: %d, no_routes: %d\n", updatePackage.sender_id, updatePackage.dest_id, updatePackage.no_routes);
-		printf("first entry dest_id: %d, next_hop: %d, cost: %d\n",
-			updatePackage.route[0].dest_id,
-			updatePackage.route[0].next_hop,
-			updatePackage.route[0].cost);
+		//printf("Current dest_id is: %d\n", neighbor_ids[i]);
+		//printf("sender_id: %d, dest_id: %d, no_routes: %d\n", updatePackage.sender_id, updatePackage.dest_id, updatePackage.no_routes);
+		//printf("first entry dest_id: %d, next_hop: %d, cost: %d\n",
+			//updatePackage.route[0].dest_id,
+			//updatePackage.route[0].next_hop,
+			//updatePackage.route[0].cost);
 		hton_pkt_RT_UPDATE(&updatePackage);	//Convert to network endian
 		if(sendto(sock_fd, &updatePackage, sizeof(updatePackage), 0, (struct sockaddr *) &serveraddr, sizeof(serveraddr)) < 0){
-			printf("Error when sending updates to ne\n");
+			fprintf(stderr, "Error when sending updates to ne\n");
 			exit(-1);
 		}
 	}
@@ -167,7 +168,7 @@ void process_receive_updates(int *neighbor_fds, int converge_fd) {
     			my_entry.cost = entry.cost + cost_to_sender;
     		}
     }
-    printf("Received updates, changed = %d\n", changed);
+    //printf("Received updates, changed = %d\n", changed);
     if (changed) {
     	/*	Reset converge timer */
     	itval.it_value.tv_sec = CONVERGE_TIMEOUT;
@@ -194,6 +195,7 @@ void process_converge(int converge_fd) {
 	clock_t end = clock();
 	int time_spent = (int)(end - begin) / CLOCKS_PER_SEC;
 	fprintf(log_file, "%d: Converged\n", time_spent);
+	fflush(log_file);
 	struct itimerspec itval;
 	itval.it_value.tv_sec = 0;
 	itval.it_value.tv_nsec = 0;
@@ -452,5 +454,6 @@ int main (int argc, char **argv) {
 
 	log_file = open_log(argv[1]);
 	main_loop();
+	close(log_file);
 	return 1;
 }
