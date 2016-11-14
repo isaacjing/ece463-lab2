@@ -15,6 +15,7 @@ int sock_fd, myId, NumNeighbors;
 FILE *log_file;
 struct sockaddr_in serveraddr;
 clock_t begin;
+struct nbr_cost neighborCost[MAX_ROUTERS];
 
 void printTable(){
 	int i = 0;
@@ -101,13 +102,15 @@ void process_receive_updates(int *neighbor_fds, int converge_fd) {
     int cost_to_sender;
     int changed = 0;
     int my_table_index;
+    int newCost;
 
     for (i = 0; i < NumRoutes; i++)
-    	if (routingTable[i].dest_id == sender_id) {
-    		cost_to_sender = routingTable[i].cost;
+    	if (neighborCost[i].nbr == sender_id) {
+    		cost_to_sender = neighborCost[i].cost;
     		break;
     	}
-	//printf("MyID: %d, cost to sender %d is: %d\n", myId, sender_id, cost_to_sender);
+
+	printf("MyID: %d, cost to sender %d is: %d\n", myId, sender_id, cost_to_sender);
 
     /*	If cost_to_sender is INIFINITY it just restared */
    	struct itimerspec itval;
@@ -131,10 +134,13 @@ void process_receive_updates(int *neighbor_fds, int converge_fd) {
 		}
   //  }
 
-    for (i = 0; i < num_routes; i++) {
+    /*for (i = 0; i < num_routes; i++) {
     	struct route_entry entry = pkt_update.route[i];
     	struct route_entry my_entry;
-
+	newCost = entry.cost + cost_to_sender;
+	if(newCost > INFINITY){
+		newCost = INFINITY;
+	}
     	int found = 0;
     	for (j = 0; j < NumRoutes; j++)
     		if (routingTable[j].dest_id == entry.dest_id) {
@@ -144,7 +150,7 @@ void process_receive_updates(int *neighbor_fds, int converge_fd) {
     			break;
     		}
 
-    	/*	If this entry is not present in my routing table, add it */
+
     	if (!found) {
     		struct route_entry new_entry = entry;
     		new_entry.next_hop = sender_id;
@@ -155,29 +161,30 @@ void process_receive_updates(int *neighbor_fds, int converge_fd) {
     		continue;
     	}
 
-	/*	Force Update Rule */
+
     	if (my_entry.next_hop == sender_id) {
-    		if (my_entry.cost != entry.cost + cost_to_sender) {
+    		if (my_entry.cost != newCost) {
     			changed = 1;
 			printf("*Force Update: Updating cost to %d, previous cost %d, previous next_hop %d, new cost %d, new next_hop %d, cost_to_sender %d\n", my_entry.dest_id, my_entry.cost, my_entry.next_hop, entry.cost + cost_to_sender, sender_id, cost_to_sender);
-    			my_entry.cost = entry.cost + cost_to_sender;
+    			my_entry.cost = newCost;
 			routingTable[my_table_index] = my_entry;
     		}
 	}
-    	/*	Split Horizon Rule */
+
     	else if (entry.next_hop == myId) {
     		continue;
     	}
-    	else if (entry.cost + cost_to_sender < my_entry.cost) {
+    	else if (newCost < my_entry.cost) {
 		printf("*Split Horizon: Updating cost to %d, previous cost %d, previous next_hop %d, new cost %d, new next_hop %d, cost_to_sender %d\n", my_entry.dest_id, my_entry.cost, my_entry.next_hop, entry.cost + cost_to_sender, sender_id, cost_to_sender);
     		my_entry.next_hop = sender_id;
-    		my_entry.cost = entry.cost + cost_to_sender;
+    		my_entry.cost = newCost;
 		routingTable[my_table_index] = my_entry;
     		changed = 1;
     	}
-
+	
     	
-    }
+    }*/
+changed = UpdateRoutes(&pkt_update, cost_to_sender, myId);
     //printf("Received updates, changed = %d\n", changed);
     if (changed) {
     	/*	Reset converge timer */
@@ -203,8 +210,8 @@ void process_receive_updates(int *neighbor_fds, int converge_fd) {
 */
 void process_converge(int converge_fd) {
 	clock_t end = clock();
-	int time_spent = (int)(end - begin) / CLOCKS_PER_SEC;
-	fprintf(log_file, "%d: Converged\n", time_spent);
+	double time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
+	fprintf(log_file, "%d: Converged\n", (int)time_spent);
 	fflush(log_file);
 	struct itimerspec itval;
 	itval.it_value.tv_sec = 0;
@@ -333,6 +340,9 @@ void init_router(int argc, char **argv) {
     int i;
     for (i = 0; i < NumRoutes; i++) 
     	neighbor_ids[i] = routingTable[i].dest_id;
+
+    for(i = 0; i < MAX_ROUTERS; i++)    
+	neighborCost[i] = initResponse.nbrcost[i];
 fprintf(log_file, "-------\n");
 printTable();
 fprintf(log_file, "--------\n");

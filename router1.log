@@ -16,53 +16,41 @@ Routing Table:
 R1 -> R0: R0, 4
 R1 -> R2: R2, 1
 R1 -> R1: R1, 0
-R1 -> R3: R2, 1000
+R1 -> R3: R2, 999
 
 Routing Table:
 R1 -> R0: R0, 4
 R1 -> R2: R2, 1
 R1 -> R1: R1, 0
-R1 -> R3: R2, 17
+R1 -> R3: R2, 62
 
 Routing Table:
 R1 -> R0: R0, 4
 R1 -> R2: R2, 1
 R1 -> R1: R1, 0
-R1 -> R3: R2, 1010
+R1 -> R3: R2, 117
 
 Routing Table:
 R1 -> R0: R0, 4
 R1 -> R2: R2, 1
 R1 -> R1: R1, 0
-R1 -> R3: R2, 27
+R1 -> R3: R2, 172
 
 Routing Table:
 R1 -> R0: R0, 4
 R1 -> R2: R2, 1
 R1 -> R1: R1, 0
-R1 -> R3: R2, 1020
+R1 -> R3: R2, 227
 
 Routing Table:
 R1 -> R0: R0, 4
 R1 -> R2: R2, 1
 R1 -> R1: R1, 0
-R1 -> R3: R2, 37
+R1 -> R3: R2, 282
 
 Routing Table:
 R1 -> R0: R0, 4
 R1 -> R2: R2, 1
 R1 -> R1: R1, 0
-R1 -> R3: R2, 1030
-
-Routing Table:
-R1 -> R0: R0, 4
-R1 -> R2: R2, 1
-R1 -> R1: R1, 0
-R1 -> R3: R2, 47
-
-Routing Table:
-R1 -> R0: R0, 4
-R1 -> R2: R2, 1
-R1 -> R1: R1, 0
-R1 -> R3: R2, 1040
+R1 -> R3: R2, 337
 

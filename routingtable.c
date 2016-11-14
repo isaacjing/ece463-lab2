@@ -11,6 +11,7 @@ struct route_entry routingTable[MAX_ROUTERS];	//This is the routing table
 int NumRoutes;	//Number of routers in routing table
 
 
+
 /* Routine Name    : InitRoutingTbl
  * INPUT ARGUMENTS : 1. (struct pkt_INIT_RESPONSE *) - The INIT_RESPONSE from Network Emulator
  *                   2. int - My router's id received from command line argument.
@@ -25,6 +26,7 @@ void InitRoutingTbl (struct pkt_INIT_RESPONSE *InitResponse, int myID){
 
 	int i;
 	struct nbr_cost neighborCost;
+	
 	
 	for(i = 0; i < InitResponse->no_nbr; i++){
 		neighborCost = InitResponse->nbrcost[i];
