@@ -101,6 +101,7 @@ void process_receive_updates(int *neighbor_fds, int converge_fd) {
     int i, j;
     int cost_to_sender;
     int changed = 0;
+<<<<<<< HEAD
     int my_table_index;
     int newCost;
 
@@ -111,11 +112,19 @@ void process_receive_updates(int *neighbor_fds, int converge_fd) {
     	}
 
 	printf("MyID: %d, cost to sender %d is: %d\n", myId, sender_id, cost_to_sender);
+=======
+
+    for (i = 0; i < num_routes; i++)
+    	if (routingTable[i].dest_id == sender_id) {
+    		cost_to_sender = routingTable[i].cost;
+    		break;
+    	}
+>>>>>>> parent of 5c8bbea... normal situation works, need to work on restarting.
 
     /*	If cost_to_sender is INIFINITY it just restared */
    	struct itimerspec itval;
    	int err;
-   // if (cost_to_sender >= INFINITY) {
+    if (cost_to_sender == INFINITY) {
     	int index;
     	for (i = 0; i < NumNeighbors; i++)
     		if (neighbor_ids[i] == sender_id) {
@@ -132,7 +141,7 @@ void process_receive_updates(int *neighbor_fds, int converge_fd) {
 			fprintf(stderr, "Failed to set time for fd of neighbor %d.", i);
 			exit(-1);
 		}
-  //  }
+    }
 
     for (i = 0; i < num_routes; i++) {
     	struct route_entry entry = pkt_update.route[i];
@@ -145,7 +154,6 @@ void process_receive_updates(int *neighbor_fds, int converge_fd) {
     	for (j = 0; j < NumRoutes; j++)
     		if (routingTable[j].dest_id == entry.dest_id) {
     			found = 1;
-			my_table_index = j;
     			my_entry = routingTable[j];
     			break;
     		}
@@ -156,11 +164,10 @@ void process_receive_updates(int *neighbor_fds, int converge_fd) {
     		new_entry.next_hop = sender_id;
     		new_entry.cost += cost_to_sender;
     		routingTable[NumRoutes++] = new_entry;
-		printf("*MyID %d adding entry: dest %d, next_hop %d, cost %d\n", myId, entry.dest_id, sender_id, new_entry.cost);
-		changed = 1;
     		continue;
     	}
 
+<<<<<<< HEAD
 
     	if (my_entry.next_hop == sender_id) {
     		if (my_entry.cost != newCost) {
@@ -183,6 +190,24 @@ void process_receive_updates(int *neighbor_fds, int converge_fd) {
     	}
 	
     	
+=======
+    	/*	Split Horizon Rule */
+    	if (entry.next_hop == myId) {
+    		continue;
+    	}
+    	if (entry.cost + cost_to_sender < my_entry.cost) {
+    		my_entry.next_hop = sender_id;
+    		my_entry.cost = entry.cost + cost_to_sender;
+    		changed = 1;
+    	}
+
+    	/*	Force Update Rule */
+    	if (my_entry.next_hop == sender_id) 
+    		if (my_entry.cost != entry.cost + cost_to_sender) {
+    			changed = 1;
+    			my_entry.cost = entry.cost + cost_to_sender;
+    		}
+>>>>>>> parent of 5c8bbea... normal situation works, need to work on restarting.
     }
 //changed = UpdateRoutes(&pkt_update, cost_to_sender, myId);
     //printf("Received updates, changed = %d\n", changed);

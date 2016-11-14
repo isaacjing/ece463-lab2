@@ -66,7 +66,6 @@ int UpdateRoutes(struct pkt_RT_UPDATE *RecvdUpdatePacket, int costToNbr, int myI
 		if(newCost > INFINITY){
 			newCost = INFINITY;
 		}
-		j = 0;
 		while(j < NumRoutes){						//Inner loop traverse current routing table
 			if(routingTable[j].dest_id == currentEntry.dest_id){	//If Destination ID matches
 				//printf("newCost = %d, routingTable[j].cost = %d, currentEntry.next_hop = %d, myID = %d\n", newCost, routingTable[j].cost, currentEntry.next_hop, myID);
