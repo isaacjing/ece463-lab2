@@ -14,8 +14,8 @@ int *neighbor_ids;
 int sock_fd, myId, NumNeighbors;
 FILE *log_file;
 struct sockaddr_in serveraddr;
-clock_t begin;
 struct nbr_cost neighborCost[MAX_ROUTERS];
+int globalTimer;
 
 void printTable(){
 	int i = 0;
@@ -194,6 +194,7 @@ void process_receive_updates(int *neighbor_fds, int converge_fd) {
     	itval.it_interval.tv_sec = 0;
     	itval.it_interval.tv_nsec = 0;
     	err = timerfd_settime(converge_fd, 0, &itval, NULL);
+	printf("Update converge fd upon receiving new update\n\n\n");
     	if (err < 0) {
 			fprintf(stderr, "Failed to set time for fd of neighbor %d.", i);
 			exit(-1);
@@ -209,9 +210,7 @@ void process_receive_updates(int *neighbor_fds, int converge_fd) {
 		print time elapsed since first receive INIT_RESPONSE
 */
 void process_converge(int converge_fd) {
-	clock_t end = clock();
-	double time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
-	fprintf(log_file, "%d: Converged\n", (int)time_spent);
+	fprintf(log_file, "%d: Converged\n", globalTimer);
 	fflush(log_file);
 	struct itimerspec itval;
 	itval.it_value.tv_sec = 0;
@@ -326,9 +325,6 @@ void init_router(int argc, char **argv) {
     	exit(-1);
     }
 	
-	/* Start the global timer */
-	begin = clock();
-	
     ntoh_pkt_INIT_RESPONSE(&initResponse);
 
     /* Initialize routing table */
@@ -353,7 +349,7 @@ FILE *open_log(char *myId) {
 	strcpy(fileName, "router");
 	strcat(fileName, myId);
 	strcat(fileName, ".log");
-	return fopen(fileName, "wr");
+	return fopen(fileName, "a");
 }
 
 void main_loop() {
@@ -431,11 +427,34 @@ void main_loop() {
 	itval.it_interval.tv_sec = 0;
 	itval.it_interval.tv_nsec = 0;
 	err = timerfd_settime (converge_fd, 0, &itval, NULL);
+	printf("SEt converge fd here\n\n\n\n\n");
 	if (err < 0) {
 		fprintf(stderr, "Failed to set time for fd sending updates.");
 		exit(-1);
 	}
 
+	/*	Timer for counting up every second */
+	int timer_fd = timerfd_create(CLOCK_MONOTONIC, 0);
+	if (timer_fd < 0) {
+		fprintf(stderr, "Failed to create fd for counting up every second.");
+		exit(-1);
+	}	
+	max_fd = timer_fd> max_fd ? timer_fd : max_fd;
+
+	/*	Initial expiration time */
+	itval.it_value.tv_sec = 1;
+	itval.it_value.tv_nsec = 0;
+
+	/*	Periodic expiration time to be 0 
+		and update initial expiration time every time it expires*/
+	itval.it_interval.tv_sec = 0;
+	itval.it_interval.tv_nsec = 0;
+	err = timerfd_settime (timer_fd, 0, &itval, NULL);
+	if (err < 0) {
+		fprintf(stderr, "Failed to set time for fd timer per second.");
+		exit(-1);
+	}
+	globalTimer = 0;
 	max_fd = sock_fd > max_fd ? sock_fd : max_fd;
 	
 
@@ -446,6 +465,7 @@ void main_loop() {
 		FD_SET(sock_fd, &rfds);
 		FD_SET(send_fd, &rfds);
 		FD_SET(converge_fd, &rfds);
+		FD_SET(timer_fd, &rfds);
 		for (i = 0; i < NumNeighbors; i++)
 			if (alive[i])
 				FD_SET(neighbor_fds[i], &rfds);
@@ -455,11 +475,26 @@ void main_loop() {
 			process_send_updates(send_fd);
 		}
 		else if (FD_ISSET(sock_fd, &rfds)) {
-			
 			process_receive_updates(neighbor_fds, converge_fd);
 		}
 		else if (FD_ISSET(converge_fd, &rfds)) {
 			process_converge(converge_fd);
+			printf("!!!Converged!!!\n\n\n");
+		}else if(FD_ISSET(timer_fd, &rfds)){
+			globalTimer++;
+			printf("Current time is: %d\n", globalTimer);
+			itval.it_value.tv_sec = 1;
+			itval.it_value.tv_nsec = 0;
+
+			/*	Periodic expiration time to be 0 
+				and update initial expiration time every time it expires*/
+			itval.it_interval.tv_sec = 0;
+			itval.it_interval.tv_nsec = 0;
+			err = timerfd_settime (timer_fd, 0, &itval, NULL);
+			if (err < 0) {
+				fprintf(stderr, "Failed to set time for fd timer per second.");
+				exit(-1);
+	}
 		}
 		else {
 			for (i = 0; i < NumNeighbors; i++) {
