@@ -101,7 +101,7 @@ void process_receive_updates(int *neighbor_fds, int converge_fd) {
     int i, j;
     int cost_to_sender;
     int changed = 0;
-    int my_table_index;
+    int my_table_index = 0;
     int newCost;
 
     for (i = 0; i < NumRoutes; i++)
